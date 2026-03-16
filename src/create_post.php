@@ -5,16 +5,11 @@ if (!isset($_SESSION['user_id'])) {
     exit;
 }
 
+// โหลดไฟล์ตั้งค่า (ดึงการเชื่อมต่อ $pdo มาจากที่นี่)
+require_once 'config.php';
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $host = 'db';
-    $dbname = 'lost_and_found_db';
-    $db_username = 'admin';
-    $db_password = 'password123';
-
     try {
-        $pdo = new PDO("mysql:host=$host;dbname=$dbname;charset=utf8mb4", $db_username, $db_password);
-        $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-
         $image_name = null;
         if (isset($_FILES['image']) && $_FILES['image']['error'] === 0) {
             $ext = pathinfo($_FILES['image']['name'], PATHINFO_EXTENSION);
@@ -39,6 +34,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $_POST['secret_question'] ?? null,  // รับค่าคำถามลับ
             $_POST['secret_answer'] ?? null     // รับค่าคำตอบ
         ]);
+        
         // ==========================================
         // 🧠 ระบบ SMART MATCH & NOTIFICATION
         // ==========================================
@@ -173,24 +169,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         </div>
 
                         <div class="bg-slate-950/50 p-6 rounded-3xl border border-slate-800 space-y-4">
-                <h3 class="text-sm font-black text-blue-400 uppercase tracking-widest flex items-center">
-                    <span class="mr-2">🔐</span> Secure Claim (คำถามลับป้องกันสวมรอย)
-                </h3>
-                <p class="text-[10px] text-slate-500 font-bold mb-4 leading-relaxed">
-                    หากเป็นโพสต์ "เก็บของได้" แนะนำให้ตั้งคำถามที่รู้แค่เจ้าของตัวจริงเท่านั้น (เช่น หน้าจอมือถือรูปอะไร? / ในกระเป๋ามีแบงก์อะไรบ้าง?)
-                </p>
-                
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                        <label class="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">ตั้งคำถามลับ</label>
-                        <input type="text" name="secret_question" placeholder="เช่น เคสโทรศัพท์สีอะไร?" class="w-full px-4 py-3 bg-slate-900 border border-slate-700 text-white rounded-2xl focus:ring-2 focus:ring-blue-500 outline-none font-medium text-sm">
-                    </div>
-                    <div>
-                        <label class="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">คำตอบที่ถูกต้อง</label>
-                        <input type="text" name="secret_answer" placeholder="เช่น สีแดง" class="w-full px-4 py-3 bg-slate-900 border border-slate-700 text-white rounded-2xl focus:ring-2 focus:ring-blue-500 outline-none font-medium text-sm">
-                    </div>
-                </div>
-            </div>
+                            <h3 class="text-sm font-black text-blue-400 uppercase tracking-widest flex items-center">
+                                <span class="mr-2">🔐</span> Secure Claim (คำถามลับป้องกันสวมรอย)
+                            </h3>
+                            <p class="text-[10px] text-slate-500 font-bold mb-4 leading-relaxed">
+                                หากเป็นโพสต์ "เก็บของได้" แนะนำให้ตั้งคำถามที่รู้แค่เจ้าของตัวจริงเท่านั้น (เช่น หน้าจอมือถือรูปอะไร? / ในกระเป๋ามีแบงก์อะไรบ้าง?)
+                            </p>
+                            
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                    <label class="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">ตั้งคำถามลับ</label>
+                                    <input type="text" name="secret_question" placeholder="เช่น เคสโทรศัพท์สีอะไร?" class="w-full px-4 py-3 bg-slate-900 border border-slate-700 text-white rounded-2xl focus:ring-2 focus:ring-blue-500 outline-none font-medium text-sm">
+                                </div>
+                                <div>
+                                    <label class="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">คำตอบที่ถูกต้อง</label>
+                                    <input type="text" name="secret_answer" placeholder="เช่น สีแดง" class="w-full px-4 py-3 bg-slate-900 border border-slate-700 text-white rounded-2xl focus:ring-2 focus:ring-blue-500 outline-none font-medium text-sm">
+                                </div>
+                            </div>
+                        </div>
 
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <div>

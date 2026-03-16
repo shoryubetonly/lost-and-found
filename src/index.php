@@ -1,17 +1,8 @@
 <?php
 session_start();
 
-$host = 'db';
-$dbname = 'lost_and_found_db';
-$username = 'admin';
-$password = 'password123';
-
-try {
-    $pdo = new PDO("mysql:host=$host;dbname=$dbname;charset=utf8mb4", $username, $password);
-    $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-} catch (PDOException $e) {
-    die("เชื่อมต่อฐานข้อมูลไม่ได้: " . $e->getMessage());
-}
+// โหลดไฟล์ตั้งค่า (ดึงการเชื่อมต่อ $pdo มาจากที่นี่ที่เดียวจบ!)
+require_once 'config.php';
 
 $is_admin = false;
 if (isset($_SESSION['user_id'])) {

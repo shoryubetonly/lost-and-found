@@ -3,15 +3,10 @@ session_start();
 // 1. ตรวจสอบสิทธิ์ Admin (เฉพาะอีเมลของคุณเท่านั้น)
 if (!isset($_SESSION['user_id'])) { header("Location: index.php"); exit; }
 
-$host = 'db';
-$dbname = 'lost_and_found_db';
-$username = 'admin';
-$password = 'password123';
+// ดึงการเชื่อมต่อฐานข้อมูลจาก config.php มาใช้ (ไฟล์เดียวจบ!)
+require_once 'config.php';
 
 try {
-    $pdo = new PDO("mysql:host=$host;dbname=$dbname;charset=utf8mb4", $username, $password);
-    $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-
     // เช็คว่าเป็น Admin จริงไหม
     $stmt_admin = $pdo->prepare("SELECT email FROM users WHERE id = ?");
     $stmt_admin->execute([$_SESSION['user_id']]);
@@ -19,7 +14,7 @@ try {
         die("เฉพาะผู้ดูแลระบบเท่านั้นที่เข้าถึงหน้านี้ได้");
     }
 
-    // 2. Query สรุปสถิติรายเดือน (ตามที่คุณเขียนมา เป๊ะมาก!)
+    // 2. Query สรุปสถิติรายเดือน
     $stmt_report = $pdo->query("
         SELECT 
             category, 

@@ -2,15 +2,10 @@
 session_start();
 if (!isset($_SESSION['user_id']) || !isset($_GET['id'])) { header("Location: index.php"); exit; }
 
-$host = 'db';
-$dbname = 'lost_and_found_db';
-$username = 'admin';
-$password = 'password123';
+// ดึงไฟล์ตั้งค่าและการเชื่อมต่อ $pdo มาจากที่เดียว
+require_once 'config.php';
 
 try {
-    $pdo = new PDO("mysql:host=$host;dbname=$dbname;charset=utf8mb4", $username, $password);
-    $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-
     $item_id = $_GET['id'];
     $stmt = $pdo->prepare("SELECT * FROM items WHERE id = ?");
     $stmt->execute([$item_id]);
