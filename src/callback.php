@@ -1,8 +1,12 @@
 <?php
 session_start();
 
-$client_id = '528445645740-03tu4jaoovaj4ndmqsjt13474nc08elo.apps.googleusercontent.com';
-$client_secret = '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';
+// 1. ดึงไฟล์ความลับเข้ามา
+require_once 'config.php'; 
+
+// 2. ตั้งค่าตัวแปรโดยดึงความลับจาก config.php มาใช้
+$client_id = '528445645740-03tu4jaoovaj4ndmqsjt13474nc08elo.apps.googleusercontent.com'; // Client ID วางทิ้งไว้ได้ ไม่ใช่ความลับ
+$client_secret = GOOGLE_CLIENT_SECRET; // <--- ดึงรหัสมาจาก config.php (ไม่โชว์รหัสจริงในหน้านี้แล้ว!)
 $redirect_uri = 'http://localhost:8088/callback.php';
 
 if (isset($_GET['code'])) {

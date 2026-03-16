@@ -1,6 +1,9 @@
 <?php
 session_start();
-if (!isset($_SESSION['user_id'])) { header("Location: index.php"); exit; }
+if (!isset($_SESSION['user_id'])) {
+    header("Location: index.php");
+    exit;
+}
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $host = 'db';
@@ -11,16 +14,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     try {
         $pdo = new PDO("mysql:host=$host;dbname=$dbname;charset=utf8mb4", $db_username, $db_password);
         $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-        
+
         $image_name = null;
         if (isset($_FILES['image']) && $_FILES['image']['error'] === 0) {
             $ext = pathinfo($_FILES['image']['name'], PATHINFO_EXTENSION);
             $image_name = time() . '.' . $ext;
-            if (!is_dir('uploads')) { mkdir('uploads', 0777, true); }
+            if (!is_dir('uploads')) {
+                mkdir('uploads', 0777, true);
+            }
             move_uploaded_file($_FILES['image']['tmp_name'], 'uploads/' . $image_name);
         }
 
-        $stmt = $pdo->prepare("INSERT INTO items (user_id, title, description, post_type, location, category, image_path) VALUES (?, ?, ?, ?, ?, ?, ?)");
+        // โค้ดส่วนบันทึกข้อมูล (อัปเดตใหม่)
+        $stmt = $pdo->prepare("INSERT INTO items (user_id, title, description, post_type, location, category, image_path, secret_question, secret_answer) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)");
+
         $stmt->execute([
             $_SESSION['user_id'],
             $_POST['title'],
@@ -28,32 +35,73 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $_POST['post_type'],
             $_POST['location'],
             $_POST['category'],
-            $image_name
+            $image_name,
+            $_POST['secret_question'] ?? null,  // รับค่าคำถามลับ
+            $_POST['secret_answer'] ?? null     // รับค่าคำตอบ
         ]);
+        // ==========================================
+        // 🧠 ระบบ SMART MATCH & NOTIFICATION
+        // ==========================================
+        $new_item_id = $pdo->lastInsertId();
+        $post_type = $_POST['post_type']; // LOST หรือ FOUND
+        $category = $_POST['category'];   // หมวดหมู่
+        $title = $_POST['title'];         // ชื่อสิ่งของ
+
+        // หาว่าเราต้องไปจับคู่กับโพสต์ประเภทไหน (ถ้าเราโพสต์ LOST ต้องหา FOUND)
+        $target_type = ($post_type === 'LOST') ? 'FOUND' : 'LOST';
+
+        // ค้นหาโพสต์ที่ยังไม่ปิดเคส ในหมวดหมู่เดียวกัน
+        $stmt_match = $pdo->prepare("SELECT id, user_id, title FROM items WHERE post_type = ? AND category = ? AND status != 'RESOLVED' AND user_id != ?");
+        $stmt_match->execute([$target_type, $category, $_SESSION['user_id']]);
+        $matches = $stmt_match->fetchAll(PDO::FETCH_ASSOC);
+
+        foreach ($matches as $match) {
+            // 1. ส่งแจ้งเตือนไปหา "เจ้าของโพสต์เดิม" ว่ามีคนโพสต์ของที่ตรงกัน!
+            $msg_to_old = "💡 Smart Match: พบเบาะแสใหม่สำหรับ '" . $match['title'] . "' อาจเป็นของที่คุณตามหา!";
+            $link_to_new = "view_post.php?id=" . $new_item_id;
+            $noti1 = $pdo->prepare("INSERT INTO notifications (user_id, message, link) VALUES (?, ?, ?)");
+            $noti1->execute([$match['user_id'], $msg_to_old, $link_to_new]);
+
+            // 2. ส่งแจ้งเตือนหา "คนที่เพิ่งโพสต์ใหม่" ด้วยว่ามีคนเคยโพสต์ของคล้ายกันไว้
+            $msg_to_new = "🎯 Smart Match: เราพบรายการ '" . $match['title'] . "' ในระบบ ลองเช็กดูสิ!";
+            $link_to_old = "view_post.php?id=" . $match['id'];
+            $noti2 = $pdo->prepare("INSERT INTO notifications (user_id, message, link) VALUES (?, ?, ?)");
+            $noti2->execute([$_SESSION['user_id'], $msg_to_new, $link_to_old]);
+        }
+        // ==========================================
 
         header("Location: index.php");
         exit;
-    } catch (PDOException $e) { 
-        $error = "เกิดข้อผิดพลาด: " . $e->getMessage(); 
+    } catch (PDOException $e) {
+        $error = "เกิดข้อผิดพลาด: " . $e->getMessage();
     }
 }
 ?>
 
 <!DOCTYPE html>
 <html lang="th">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>สร้างประกาศใหม่ - CampusFinds Dark</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&family=Noto+Sans+Thai:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <style> body { font-family: 'Inter', 'Noto Sans Thai', sans-serif; } </style>
+    <style>
+        body {
+            font-family: 'Inter', 'Noto Sans Thai', sans-serif;
+        }
+    </style>
 </head>
-<body class="bg-slate-950 text-slate-100 min-h-screen"> <div class="max-w-5xl mx-auto px-4 py-12">
+
+<body class="bg-slate-950 text-slate-100 min-h-screen">
+    <div class="max-w-5xl mx-auto px-4 py-12">
         <div class="flex items-center justify-between mb-10">
             <div>
                 <a href="index.php" class="flex items-center text-slate-500 hover:text-blue-400 transition font-bold group text-sm uppercase tracking-widest">
-                    <svg class="w-5 h-5 mr-2 group-hover:-translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
+                    <svg class="w-5 h-5 mr-2 group-hover:-translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
+                    </svg>
                     Back to Home
                 </a>
                 <h1 class="text-4xl font-black text-white mt-3">สร้างประกาศใหม่</h1>
@@ -68,7 +116,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             <div class="lg:col-span-2">
                 <form action="create_post.php" method="POST" enctype="multipart/form-data" class="bg-slate-900 rounded-[2.5rem] shadow-2xl border border-slate-800 overflow-hidden">
                     <div class="p-8 lg:p-10 space-y-8">
-                        
+
                         <div>
                             <label class="block text-xs font-black text-slate-500 uppercase tracking-widest mb-4">
                                 คุณต้องการทำอะไร?
@@ -124,6 +172,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             </div>
                         </div>
 
+                        <div class="bg-slate-950/50 p-6 rounded-3xl border border-slate-800 space-y-4">
+                <h3 class="text-sm font-black text-blue-400 uppercase tracking-widest flex items-center">
+                    <span class="mr-2">🔐</span> Secure Claim (คำถามลับป้องกันสวมรอย)
+                </h3>
+                <p class="text-[10px] text-slate-500 font-bold mb-4 leading-relaxed">
+                    หากเป็นโพสต์ "เก็บของได้" แนะนำให้ตั้งคำถามที่รู้แค่เจ้าของตัวจริงเท่านั้น (เช่น หน้าจอมือถือรูปอะไร? / ในกระเป๋ามีแบงก์อะไรบ้าง?)
+                </p>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">ตั้งคำถามลับ</label>
+                        <input type="text" name="secret_question" placeholder="เช่น เคสโทรศัพท์สีอะไร?" class="w-full px-4 py-3 bg-slate-900 border border-slate-700 text-white rounded-2xl focus:ring-2 focus:ring-blue-500 outline-none font-medium text-sm">
+                    </div>
+                    <div>
+                        <label class="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">คำตอบที่ถูกต้อง</label>
+                        <input type="text" name="secret_answer" placeholder="เช่น สีแดง" class="w-full px-4 py-3 bg-slate-900 border border-slate-700 text-white rounded-2xl focus:ring-2 focus:ring-blue-500 outline-none font-medium text-sm">
+                    </div>
+                </div>
+            </div>
+
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <div>
                                 <label class="block text-xs font-black text-slate-500 uppercase tracking-widest mb-2">สถานที่พบเจอ/ทำหาย</label>
@@ -176,4 +244,5 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     </div>
 
 </body>
+
 </html>

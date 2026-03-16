@@ -79,6 +79,49 @@ function getCatName($cat) {
                 </div>
                 <div class="flex items-center">
                     <?php if(isset($_SESSION['user_id'])): ?>
+                        
+                        <?php 
+                            $stmt_unread = $pdo->prepare("SELECT COUNT(*) FROM notifications WHERE user_id = ? AND is_read = 0");
+                            $stmt_unread->execute([$_SESSION['user_id']]);
+                            $unread_count = $stmt_unread->fetchColumn();
+                        ?>
+                        <div class="relative group cursor-pointer mr-5">
+                            <div class="bg-slate-800 w-10 h-10 flex items-center justify-center rounded-full hover:bg-slate-700 transition-colors border border-slate-700 relative">
+                                <span class="text-sm">🔔</span>
+                                <?php if($unread_count > 0): ?>
+                                    <span class="absolute -top-1 -right-1 bg-rose-500 text-white text-[9px] font-black w-4 h-4 flex items-center justify-center rounded-full animate-pulse border border-slate-900">
+                                        <?= $unread_count ?>
+                                    </span>
+                                <?php endif; ?>
+                            </div>
+                            
+                            <div class="absolute right-0 mt-2 w-80 bg-slate-900 border border-slate-800 shadow-2xl rounded-2xl overflow-hidden hidden group-hover:block z-50">
+                                <div class="p-3 border-b border-slate-800 bg-slate-950/50 flex justify-between items-center">
+                                    <span class="text-xs font-black text-white uppercase tracking-widest">การแจ้งเตือน</span>
+                                    <?php if($unread_count > 0): ?>
+                                        <span class="text-[9px] bg-rose-500/20 text-rose-400 px-2 py-1 rounded-lg font-bold">ใหม่ <?= $unread_count ?></span>
+                                    <?php endif; ?>
+                                </div>
+                                <div class="max-h-64 overflow-y-auto">
+                                    <?php 
+                                        $stmt_noti = $pdo->prepare("SELECT * FROM notifications WHERE user_id = ? ORDER BY created_at DESC LIMIT 5");
+                                        $stmt_noti->execute([$_SESSION['user_id']]);
+                                        $notifications = $stmt_noti->fetchAll(PDO::FETCH_ASSOC);
+                                    ?>
+                                    <?php if(empty($notifications)): ?>
+                                        <div class="p-6 text-center text-xs text-slate-500 font-bold bg-slate-900">ไม่มีการแจ้งเตือนใหม่</div>
+                                    <?php else: ?>
+                                        <?php foreach($notifications as $noti): ?>
+                                            <a href="<?= $noti['link'] ?>" class="block p-4 border-b border-slate-800/50 hover:bg-slate-800 transition-colors <?= $noti['is_read'] ? 'opacity-50' : 'bg-blue-900/10' ?>">
+                                                <p class="text-xs font-medium text-slate-200 leading-relaxed"><?= htmlspecialchars($noti['message']) ?></p>
+                                                <p class="text-[9px] font-bold text-slate-500 mt-2"><?= date('d M H:i', strtotime($noti['created_at'])) ?></p>
+                                            </a>
+                                        <?php endforeach; ?>
+                                    <?php endif; ?>
+                                </div>
+                            </div>
+                        </div>
+
                         <div class="hidden sm:flex flex-col text-right mr-4">
                             <span class="text-sm font-bold text-slate-100"><?= htmlspecialchars($_SESSION['user_name']) ?></span>
                             <?php if($is_admin): ?><span class="text-[10px] text-blue-400 font-black uppercase tracking-widest">Admin</span><?php endif; ?>
